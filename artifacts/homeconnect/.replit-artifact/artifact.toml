@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "HomeConnect"
+version = "1.0.0"
+id = "artifacts/homeconnect"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21128
+
+[services.development]
+run = "pnpm --filter @workspace/homeconnect run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/homeconnect", "run", "build" ]
+publicDir = "artifacts/homeconnect/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21128"
+BASE_PATH = "/"

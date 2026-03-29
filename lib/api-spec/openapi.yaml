@@ -1,22 +1,30 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: HomeConnect Real Estate API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: properties
+    description: Property listings
+  - name: enquiries
+    description: Tenant enquiries
+  - name: bookmarks
+    description: Saved/bookmarked properties
+  - name: users
+    description: User profile operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +32,332 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/user:
+    get:
+      operationId: getCurrentAuthUser
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user or null
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetCurrentAuthUserResponse"
+
+  /login:
+    get:
+      operationId: login
+      tags: [auth]
+      summary: Redirect to login
+      parameters:
+        - name: returnTo
+          in: query
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to OIDC provider
+
+  /logout:
+    get:
+      operationId: logout
+      tags: [auth]
+      summary: Logout user
+      responses:
+        "302":
+          description: Redirect after logout
+
+  /users/profile:
+    get:
+      operationId: getUserProfile
+      tags: [users]
+      summary: Get current user profile with role
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Unauthorized
+
+    put:
+      operationId: updateUserProfile
+      tags: [users]
+      summary: Update user profile (set role, phone, etc.)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserProfileBody"
+      responses:
+        "200":
+          description: Updated user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Unauthorized
+
+  /properties:
+    get:
+      operationId: listProperties
+      tags: [properties]
+      summary: List all available properties with optional filters
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [rent, sale]
+        - name: city
+          in: query
+          schema:
+            type: string
+        - name: minPrice
+          in: query
+          schema:
+            type: number
+        - name: maxPrice
+          in: query
+          schema:
+            type: number
+        - name: bedrooms
+          in: query
+          schema:
+            type: integer
+        - name: verified
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of properties
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyListResponse"
+
+    post:
+      operationId: createProperty
+      tags: [properties]
+      summary: Create a new property listing (landlord only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePropertyBody"
+      responses:
+        "201":
+          description: Created property
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Property"
+        "401":
+          description: Unauthorized
+
+  /properties/{id}:
+    get:
+      operationId: getProperty
+      tags: [properties]
+      summary: Get a single property by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Property details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Property"
+        "404":
+          description: Not found
+
+    put:
+      operationId: updateProperty
+      tags: [properties]
+      summary: Update a property listing (owner only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePropertyBody"
+      responses:
+        "200":
+          description: Updated property
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Property"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
+    delete:
+      operationId: deleteProperty
+      tags: [properties]
+      summary: Delete a property listing (owner only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+
+  /properties/my:
+    get:
+      operationId: getMyProperties
+      tags: [properties]
+      summary: Get all properties listed by the current landlord
+      responses:
+        "200":
+          description: Landlord property list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyListResponse"
+        "401":
+          description: Unauthorized
+
+  /enquiries:
+    post:
+      operationId: createEnquiry
+      tags: [enquiries]
+      summary: Send an enquiry about a property (tenant)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEnquiryBody"
+      responses:
+        "201":
+          description: Enquiry sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Enquiry"
+        "401":
+          description: Unauthorized
+
+  /enquiries/received:
+    get:
+      operationId: getReceivedEnquiries
+      tags: [enquiries]
+      summary: Get all enquiries received by the landlord
+      responses:
+        "200":
+          description: List of received enquiries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnquiryListResponse"
+        "401":
+          description: Unauthorized
+
+  /enquiries/sent:
+    get:
+      operationId: getSentEnquiries
+      tags: [enquiries]
+      summary: Get all enquiries sent by the current tenant
+      responses:
+        "200":
+          description: List of sent enquiries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnquiryListResponse"
+        "401":
+          description: Unauthorized
+
+  /bookmarks:
+    get:
+      operationId: getBookmarks
+      tags: [bookmarks]
+      summary: Get all bookmarked properties for the current user
+      responses:
+        "200":
+          description: List of bookmarked properties
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyListResponse"
+        "401":
+          description: Unauthorized
+
+    post:
+      operationId: addBookmark
+      tags: [bookmarks]
+      summary: Bookmark a property
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookmarkBody"
+      responses:
+        "201":
+          description: Bookmarked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Unauthorized
+
+  /bookmarks/{propertyId}:
+    delete:
+      operationId: removeBookmark
+      tags: [bookmarks]
+      summary: Remove a bookmark
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Unauthorized
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +368,336 @@ components:
       required:
         - status
 
+    GetCurrentAuthUserResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/AuthUser"
+      required:
+        - user
+
+    AuthUser:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        profileImage:
+          type: string
+          nullable: true
+      required:
+        - id
+        - username
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        profileImage:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [landlord, tenant]
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        isVerified:
+          type: boolean
+        bio:
+          type: string
+          nullable: true
+      required:
+        - id
+        - username
+        - isVerified
+
+    UpdateUserProfileBody:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [landlord, tenant]
+        phone:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+      required:
+        - role
+
+    Property:
+      type: object
+      properties:
+        id:
+          type: integer
+        landlordId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [rent, sale]
+        status:
+          type: string
+          enum: [available, rented, sold]
+        price:
+          type: number
+        city:
+          type: string
+        address:
+          type: string
+        bedrooms:
+          type: integer
+        bathrooms:
+          type: integer
+        area:
+          type: number
+          nullable: true
+        images:
+          type: array
+          items:
+            type: string
+        isVerified:
+          type: boolean
+        hasLandDocuments:
+          type: boolean
+        landlord:
+          $ref: "#/components/schemas/LandlordInfo"
+          nullable: true
+        isBookmarked:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - landlordId
+        - title
+        - description
+        - type
+        - status
+        - price
+        - city
+        - address
+        - bedrooms
+        - bathrooms
+        - images
+        - isVerified
+        - hasLandDocuments
+        - isBookmarked
+        - createdAt
+
+    LandlordInfo:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        profileImage:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        isVerified:
+          type: boolean
+      required:
+        - id
+        - username
+        - isVerified
+
+    PropertyListResponse:
+      type: object
+      properties:
+        properties:
+          type: array
+          items:
+            $ref: "#/components/schemas/Property"
+        total:
+          type: integer
+      required:
+        - properties
+        - total
+
+    CreatePropertyBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [rent, sale]
+        price:
+          type: number
+        city:
+          type: string
+        address:
+          type: string
+        bedrooms:
+          type: integer
+        bathrooms:
+          type: integer
+        area:
+          type: number
+          nullable: true
+        images:
+          type: array
+          items:
+            type: string
+        hasLandDocuments:
+          type: boolean
+      required:
+        - title
+        - description
+        - type
+        - price
+        - city
+        - address
+        - bedrooms
+        - bathrooms
+        - images
+        - hasLandDocuments
+
+    UpdatePropertyBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [rent, sale]
+        status:
+          type: string
+          enum: [available, rented, sold]
+        price:
+          type: number
+        city:
+          type: string
+        address:
+          type: string
+        bedrooms:
+          type: integer
+        bathrooms:
+          type: integer
+        area:
+          type: number
+          nullable: true
+        images:
+          type: array
+          items:
+            type: string
+        hasLandDocuments:
+          type: boolean
+
+    Enquiry:
+      type: object
+      properties:
+        id:
+          type: integer
+        propertyId:
+          type: integer
+        tenantId:
+          type: string
+        message:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, read]
+        property:
+          $ref: "#/components/schemas/Property"
+          nullable: true
+        tenant:
+          $ref: "#/components/schemas/LandlordInfo"
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - propertyId
+        - tenantId
+        - message
+        - status
+        - createdAt
+
+    EnquiryListResponse:
+      type: object
+      properties:
+        enquiries:
+          type: array
+          items:
+            $ref: "#/components/schemas/Enquiry"
+        total:
+          type: integer
+      required:
+        - enquiries
+        - total
+
+    CreateEnquiryBody:
+      type: object
+      properties:
+        propertyId:
+          type: integer
+        message:
+          type: string
+        phone:
+          type: string
+          nullable: true
+      required:
+        - propertyId
+        - message
+
+    BookmarkBody:
+      type: object
+      properties:
+        propertyId:
+          type: integer
+      required:
+        - propertyId
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+          nullable: true
+      required:
+        - success
