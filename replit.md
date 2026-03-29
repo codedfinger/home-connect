@@ -9,14 +9,14 @@ A real estate MVP platform connecting landlords directly with tenants, eliminati
 - **Monorepo tool**: pnpm workspaces
 - **Node.js version**: 24
 - **Package manager**: pnpm
-- **TypeScript version**: 5.9
+- **Language**: JavaScript (ES Modules) — no TypeScript
 - **API framework**: Express 5
 - **Database**: PostgreSQL + Drizzle ORM
 - **Validation**: Zod, `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (ESM bundle)
-- **Frontend**: React + Vite (Tailwind CSS, shadcn/ui)
-- **Auth**: Replit Auth (OpenID Connect with PKCE)
+- **Frontend**: React + Vite (Tailwind CSS, shadcn/ui, JSX)
+- **Auth**: Custom session auth (email/password)
 
 ## Features
 
