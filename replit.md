@@ -41,18 +41,20 @@ A real estate MVP platform connecting landlords directly with tenants, eliminati
 ## Structure
 
 ```text
-artifacts-monorepo/
-├── artifacts/
-│   ├── api-server/          # Express 5 API backend
-│   └── homeconnect/         # React + Vite frontend (previewPath: /)
+homeconnect/
+├── frontend/            # React + Vite frontend (@workspace/frontend)
+│   ├── src/             # JSX/JS source files
+│   └── vite.config.js
+├── backend/             # Express 5 API backend (@workspace/backend)
+│   ├── src/             # JS source files
+│   └── build.mjs
 ├── lib/
-│   ├── api-spec/            # OpenAPI spec + Orval codegen config
-│   ├── api-client-react/    # Generated React Query hooks
-│   ├── api-zod/             # Generated Zod schemas from OpenAPI
-│   ├── replit-auth-web/     # useAuth() hook for browser auth
-│   └── db/                  # Drizzle ORM schema + DB connection
+│   ├── api-spec/        # OpenAPI spec + Orval codegen config
+│   ├── api-client-react/# Generated React Query hooks
+│   ├── api-zod/         # Generated Zod schemas from OpenAPI
+│   ├── replit-auth-web/ # useAuth() hook for browser auth
+│   └── db/              # Drizzle ORM schema + DB connection
 ├── pnpm-workspace.yaml
-├── tsconfig.json
 └── package.json
 ```
 
@@ -105,7 +107,7 @@ All routes prefixed with `/api`:
 
 ## Development
 
-- Run API: `pnpm --filter @workspace/api-server run dev`
-- Run frontend: `pnpm --filter @workspace/homeconnect run dev`
+- Run API: `pnpm --filter @workspace/backend run dev`
+- Run frontend: `pnpm --filter @workspace/frontend run dev`
 - Push schema: `pnpm --filter @workspace/db run push`
 - Regenerate API types: `pnpm --filter @workspace/api-spec run codegen`
