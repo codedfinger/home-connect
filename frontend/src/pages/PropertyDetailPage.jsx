@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { formatNaira } from "@/lib/format-currency";
+
 function PropertyDetailPage() {
   const { id } = useParams();
   const propertyId = parseInt(id, 10);
@@ -74,14 +76,6 @@ function PropertyDetailPage() {
         </div>
       </div>
     </div>;
-  const formatPrice = (price) => {
-    const formatted = new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 0
-    }).format(price);
-    return property.type === "rent" ? `${formatted}/month` : formatted;
-  };
   const images = property.images?.length > 0 ? property.images : ["https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&q=80"];
   return <div className="min-h-screen bg-muted/10 flex flex-col">
       <Navbar />
@@ -116,7 +110,7 @@ function PropertyDetailPage() {
           </div>
           <div className="text-left md:text-right">
             <p className="text-3xl md:text-4xl font-bold text-primary font-display">
-              {formatPrice(property.price)}
+              {formatNaira(property.price, property.type, "month")}
             </p>
           </div>
         </div>
@@ -212,15 +206,20 @@ function PropertyDetailPage() {
   }
           <div className="lg:col-span-1">
             <div className="sticky top-24 bg-white rounded-3xl border border-border shadow-lg p-6">
-              <h3 className="font-bold font-display text-lg mb-4">Listed by Owner</h3>
+              <h3 className="font-bold font-display text-lg mb-4">Listed by</h3>
               
               <div className="flex items-center gap-4 mb-6 p-4 rounded-2xl bg-muted/30">
                 <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
                   {property.landlord?.profileImage ? <img src={property.landlord.profileImage} alt="Owner" className="w-full h-full object-cover" /> : <User className="h-8 w-8 text-primary" />}
                 </div>
                 <div>
-                  <p className="font-bold text-lg">{property.landlord?.firstName || "Verified"} {property.landlord?.lastName || "Owner"}</p>
-                  {property.landlord?.isVerified && <LandlordBadge />}
+                  <p className="font-bold text-lg">
+                    {property.landlord?.firstName || property.landlord?.lastName
+                      ? `${property.landlord?.firstName ?? ""} ${property.landlord?.lastName ?? ""}`.trim()
+                      : property.landlord?.username ?? "Property contact"}
+                  </p>
+                  {property.landlord?.phone && <p className="text-sm text-muted-foreground mt-1">{property.landlord.phone}</p>}
+                  {property.landlord?.isVerified && <div className="mt-2"><LandlordBadge /></div>}
                 </div>
               </div>
 
@@ -274,7 +273,7 @@ function PropertyDetailPage() {
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-    placeholder="+1 (555) 000-0000"
+    placeholder="+234 800 000 0000"
     value={phone}
     onChange={(e) => setPhone(e.target.value)}
     className="pl-9 rounded-xl"

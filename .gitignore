@@ -27,6 +27,14 @@ node_modules
 !.vscode/launch.json
 !.vscode/extensions.json
 
+# local env
+.env
+
+# local SQLite (WAL sidecars)
+/data/*.db
+/data/*.db-shm
+/data/*.db-wal
+
 # misc
 /.sass-cache
 /connect.lock
@@ -44,6 +52,5 @@ Thumbs.db
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
 
-# Replit
 .cache/
 .local/

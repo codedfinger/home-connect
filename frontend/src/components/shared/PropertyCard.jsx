@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAppAuth } from "@/hooks/use-app-auth";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { formatNaira } from "@/lib/format-currency";
 import { useToast } from "@/hooks/use-toast";
 function PropertyCard({ property, index = 0 }) {
   const { isAuthenticated, login } = useAppAuth();
@@ -40,14 +41,6 @@ function PropertyCard({ property, index = 0 }) {
     } else {
       addBookmark({ data: { propertyId: property.id } });
     }
-  };
-  const formatPrice = (price, type) => {
-    const formatted = new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 0
-    }).format(price);
-    return type === "rent" ? `${formatted}/mo` : formatted;
   };
   const defaultImage = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80";
   return <motion.div
@@ -116,7 +109,7 @@ function PropertyCard({ property, index = 0 }) {
             </div>
             
             <p className="text-primary font-bold text-xl mb-4">
-              {formatPrice(property.price, property.type)}
+              {formatNaira(property.price, property.type, "mo")}
             </p>
 
             <div className="flex items-center text-muted-foreground text-sm mb-4">

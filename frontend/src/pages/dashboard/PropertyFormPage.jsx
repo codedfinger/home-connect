@@ -15,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useEffect } from "react";
+import { useAppAuth } from "@/hooks/use-app-auth";
+
 const propertySchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
   description: z.string().min(20, "Description must be at least 20 characters"),
@@ -27,13 +29,17 @@ const propertySchema = z.object({
   area: z.coerce.number().optional().nullable(),
   images: z.string().transform((str) => str.split(",").map((s) => s.trim()).filter(Boolean)),
   hasLandDocuments: z.boolean().default(false),
-  status: z.enum(["available", "rented", "sold"]).optional()
+  status: z.enum(["available", "rented", "sold"]).optional(),
+  listingContactName: z.string().min(2, "Contact name is required"),
+  listingContactPhone: z.string().min(5, "Contact phone is required"),
 });
+
 function PropertyFormPage() {
   const { id } = useParams();
   const isEditing = !!id;
   const propertyId = id ? parseInt(id, 10) : 0;
   const [, setLocation] = useLocation();
+  const { profile, isFullyLoaded } = useAppAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: property, isLoading: isLoadingProp } = useGetProperty(propertyId, {
@@ -51,38 +57,51 @@ function PropertyFormPage() {
       bedrooms: 1,
       bathrooms: 1,
       area: null,
-      images: [],
-      // handled by transform
+      images: "",
       hasLandDocuments: false,
-      status: "available"
-    }
+      status: "available",
+      listingContactName: "",
+      listingContactPhone: "",
+    },
   });
+
+  useEffect(() => {
+    if (!isFullyLoaded || !profile) return;
+    if (profile.role !== "admin") {
+      setLocation("/");
+    }
+  }, [isFullyLoaded, profile, setLocation]);
+
   useEffect(() => {
     if (property && isEditing) {
       form.reset({
         ...property,
-        images: property.images?.join(", ")
-        // string for text input
+        images: property.images?.join(", ") ?? "",
+        listingContactName:
+          property.listingContactName ?? property.landlord?.username ?? "",
+        listingContactPhone:
+          property.listingContactPhone ?? property.landlord?.phone ?? "",
       });
     }
   }, [property, isEditing, form]);
+
   const { mutate: createProp, isPending: isCreating } = useCreateProperty({
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetMyPropertiesQueryKey() });
         toast({ title: "Property listed successfully!" });
-        setLocation("/dashboard/landlord");
-      }
-    }
+        setLocation("/dashboard/admin");
+      },
+    },
   });
   const { mutate: updateProp, isPending: isUpdating } = useUpdateProperty({
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetMyPropertiesQueryKey() });
         toast({ title: "Property updated successfully!" });
-        setLocation("/dashboard/landlord");
-      }
-    }
+        setLocation("/dashboard/admin");
+      },
+    },
   });
   const onSubmit = (values) => {
     if (isEditing) {
@@ -92,21 +111,37 @@ function PropertyFormPage() {
     }
   };
   const isPending = isCreating || isUpdating;
-  if (isEditing && isLoadingProp) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+
+  if (!isFullyLoaded || profile?.role !== "admin") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/10">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
+
+  if (isEditing && isLoadingProp) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return <div className="min-h-screen bg-muted/10 flex flex-col">
       <Navbar />
       
       <main className="flex-grow container mx-auto px-4 md:px-6 py-8 max-w-4xl">
-        <Button variant="ghost" onClick={() => setLocation("/dashboard/landlord")} className="mb-6 -ml-4">
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Dashboard
+        <Button variant="ghost" onClick={() => setLocation("/dashboard/admin")} className="mb-6 -ml-4">
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to dashboard
         </Button>
 
         <div className="bg-white rounded-3xl p-8 border border-border shadow-sm">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold font-display">{isEditing ? "Edit Property" : "List New Property"}</h1>
-            <p className="text-muted-foreground mt-2">Provide detailed information to attract the best tenants or buyers.</p>
+            <h1 className="text-3xl font-bold font-display">{isEditing ? "Edit listing" : "Add listing"}</h1>
+            <p className="text-muted-foreground mt-2">
+              Enter property details and the owner or agent tenants should contact.
+            </p>
           </div>
 
           <Form {...form}>
@@ -134,7 +169,7 @@ function PropertyFormPage() {
                   </FormItem>} />
 
                 <FormField control={form.control} name="price" render={({ field }) => <FormItem>
-                    <FormLabel>Price ($)</FormLabel>
+                    <FormLabel>Price (₦)</FormLabel>
                     <FormControl><Input type="number" className="h-12 rounded-xl" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>} />
@@ -201,6 +236,35 @@ function PropertyFormPage() {
                     <FormMessage />
                   </FormItem>} />
 
+                <div className="md:col-span-2 grid md:grid-cols-2 gap-6 p-6 rounded-2xl border border-border bg-muted/20">
+                  <FormField
+                    control={form.control}
+                    name="listingContactName"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-1">
+                        <FormLabel>Owner / agent name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Shown to tenants" className="h-12 rounded-xl" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="listingContactPhone"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-1">
+                        <FormLabel>Contact phone</FormLabel>
+                        <FormControl>
+                          <Input placeholder="+234 …" className="h-12 rounded-xl" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
                 <div className="md:col-span-2 bg-emerald-50 border border-emerald-100 p-6 rounded-2xl">
                   <FormField control={form.control} name="hasLandDocuments" render={({ field }) => <FormItem className="flex flex-row items-center justify-between rounded-lg">
                       <div className="space-y-1.5">
@@ -218,7 +282,7 @@ function PropertyFormPage() {
               </div>
 
               <div className="flex justify-end gap-4 pt-6 border-t border-border">
-                <Button type="button" variant="ghost" onClick={() => setLocation("/dashboard/landlord")} className="rounded-xl px-6">
+                <Button type="button" variant="ghost" onClick={() => setLocation("/dashboard/admin")} className="rounded-xl px-6">
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isPending} className="rounded-xl px-10 h-12 text-base shadow-lg">

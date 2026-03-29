@@ -61,7 +61,17 @@ router.post("/auth/signup", async (req, res) => {
   }
   const passwordHash = await bcrypt.hash(password, 10);
   const username = email.split("@")[0];
-  const [user] = await db.insert(usersTable).values({ email, passwordHash, username, firstName: firstName ?? null, lastName: lastName ?? null }).returning();
+  const [user] = await db
+    .insert(usersTable)
+    .values({
+      email,
+      passwordHash,
+      username,
+      firstName: firstName ?? null,
+      lastName: lastName ?? null,
+      role: "tenant",
+    })
+    .returning();
   const sid = await createSession({
     user: {
       id: user.id,

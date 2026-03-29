@@ -240,7 +240,7 @@ paths:
     get:
       operationId: getMyProperties
       tags: [properties]
-      summary: Get all properties listed by the current landlord
+      summary: Admin — all listings; landlord — own listings only
       responses:
         "200":
           description: Landlord property list
@@ -415,7 +415,7 @@ components:
           nullable: true
         role:
           type: string
-          enum: [landlord, tenant]
+          enum: [landlord, tenant, admin]
           nullable: true
         phone:
           type: string
@@ -433,17 +433,12 @@ components:
     UpdateUserProfileBody:
       type: object
       properties:
-        role:
-          type: string
-          enum: [landlord, tenant]
         phone:
           type: string
           nullable: true
         bio:
           type: string
           nullable: true
-      required:
-        - role
 
     Property:
       type: object
@@ -452,6 +447,13 @@ components:
           type: integer
         landlordId:
           type: string
+          nullable: true
+        listingContactName:
+          type: string
+          nullable: true
+        listingContactPhone:
+          type: string
+          nullable: true
         title:
           type: string
         description:
@@ -493,7 +495,6 @@ components:
           format: date-time
       required:
         - id
-        - landlordId
         - title
         - description
         - type
@@ -577,6 +578,10 @@ components:
             type: string
         hasLandDocuments:
           type: boolean
+        listingContactName:
+          type: string
+        listingContactPhone:
+          type: string
       required:
         - title
         - description
@@ -588,6 +593,8 @@ components:
         - bathrooms
         - images
         - hasLandDocuments
+        - listingContactName
+        - listingContactPhone
 
     UpdatePropertyBody:
       type: object
@@ -621,6 +628,10 @@ components:
             type: string
         hasLandDocuments:
           type: boolean
+        listingContactName:
+          type: string
+        listingContactPhone:
+          type: string
 
     Enquiry:
       type: object

@@ -1,92 +1,143 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { propertiesTable, bookmarksTable, usersTable } from "@workspace/db/schema";
-import { eq, and, ilike, gte, lte, sql } from "drizzle-orm";
+import { eq, and, gte, lte, like, inArray } from "drizzle-orm";
 import { z } from "zod";
+import { formatPropertyResponse } from "../lib/formatProperty";
+
 const router = Router();
-function formatProperty(p, landlord, isBookmarked) {
-  return {
-    id: p.id,
-    landlordId: p.landlordId,
-    title: p.title,
-    description: p.description,
-    type: p.type,
-    status: p.status,
-    price: Number(p.price),
-    city: p.city,
-    address: p.address,
-    bedrooms: p.bedrooms,
-    bathrooms: p.bathrooms,
-    area: p.area ? Number(p.area) : null,
-    images: p.images ?? [],
-    isVerified: p.isVerified,
-    hasLandDocuments: p.hasLandDocuments,
-    landlord: landlord ? {
-      id: landlord.id,
-      username: landlord.username ?? landlord.email ?? landlord.id,
-      firstName: landlord.firstName,
-      lastName: landlord.lastName,
-      profileImage: landlord.profileImageUrl,
-      phone: landlord.phone,
-      isVerified: landlord.isVerified === "true"
-    } : null,
-    isBookmarked,
-    createdAt: p.createdAt?.toISOString() ?? (/* @__PURE__ */ new Date()).toISOString()
-  };
+
+function assertAdmin(req, res) {
+  if (!req.isAuthenticated() || req.user.role !== "admin") {
+    res.status(403).json({ error: "Only admins can add or edit listings" });
+    return false;
+  }
+  return true;
 }
+
 router.get("/properties", async (req, res) => {
   const { type, city, minPrice, maxPrice, bedrooms, verified } = req.query;
   const conditions = [];
   if (type) conditions.push(eq(propertiesTable.type, type));
-  if (city) conditions.push(ilike(propertiesTable.city, `%${city}%`));
-  if (minPrice) conditions.push(gte(propertiesTable.price, String(minPrice)));
-  if (maxPrice) conditions.push(lte(propertiesTable.price, String(maxPrice)));
+  if (city) conditions.push(like(propertiesTable.city, `%${city}%`));
+  if (minPrice) conditions.push(gte(propertiesTable.price, Number(minPrice)));
+  if (maxPrice) conditions.push(lte(propertiesTable.price, Number(maxPrice)));
   if (bedrooms) conditions.push(eq(propertiesTable.bedrooms, Number(bedrooms)));
   if (verified === "true") conditions.push(eq(propertiesTable.isVerified, true));
-  const props = await db.select().from(propertiesTable).where(conditions.length ? and(...conditions) : void 0);
+  const props = await db
+    .select()
+    .from(propertiesTable)
+    .where(conditions.length ? and(...conditions) : void 0);
   const currentUserId = req.isAuthenticated() ? req.user.id : null;
-  const landlordIds = [...new Set(props.map((p) => p.landlordId))];
-  const landlords = landlordIds.length ? await db.select().from(usersTable).where(sql`${usersTable.id} = ANY(ARRAY[${sql.join(landlordIds.map((id) => sql`${id}`), sql`, `)}]::text[])`) : [];
+  const landlordIds = [
+    ...new Set(props.map((p) => p.landlordId).filter(Boolean)),
+  ];
+  const landlords = landlordIds.length
+    ? await db.select().from(usersTable).where(inArray(usersTable.id, landlordIds))
+    : [];
   const landlordMap = Object.fromEntries(landlords.map((l) => [l.id, l]));
   let bookmarkedIds = /* @__PURE__ */ new Set();
   if (currentUserId) {
-    const bms = await db.select().from(bookmarksTable).where(eq(bookmarksTable.userId, currentUserId));
+    const bms = await db
+      .select()
+      .from(bookmarksTable)
+      .where(eq(bookmarksTable.userId, currentUserId));
     bookmarkedIds = new Set(bms.map((b) => b.propertyId));
   }
-  const formatted = props.map(
-    (p) => formatProperty(p, landlordMap[p.landlordId] ?? null, bookmarkedIds.has(p.id))
+  const formatted = props.map((p) =>
+    formatPropertyResponse(
+      p,
+      p.landlordId ? landlordMap[p.landlordId] ?? null : null,
+      bookmarkedIds.has(p.id)
+    )
   );
   res.json({ properties: formatted, total: formatted.length });
 });
+
 router.get("/properties/my", async (req, res) => {
   if (!req.isAuthenticated()) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
-  const props = await db.select().from(propertiesTable).where(eq(propertiesTable.landlordId, req.user.id));
-  const [landlord] = await db.select().from(usersTable).where(eq(usersTable.id, req.user.id));
-  const formatted = props.map((p) => formatProperty(p, landlord ?? null, false));
-  res.json({ properties: formatted, total: formatted.length });
+  const role = req.user.role;
+  if (role === "admin") {
+    const props = await db.select().from(propertiesTable);
+    const landlordIds = [
+      ...new Set(props.map((p) => p.landlordId).filter(Boolean)),
+    ];
+    const landlords = landlordIds.length
+      ? await db
+          .select()
+          .from(usersTable)
+          .where(inArray(usersTable.id, landlordIds))
+      : [];
+    const landlordMap = Object.fromEntries(landlords.map((l) => [l.id, l]));
+    const formatted = props.map((p) =>
+      formatPropertyResponse(
+        p,
+        p.landlordId ? landlordMap[p.landlordId] ?? null : null,
+        false
+      )
+    );
+    res.json({ properties: formatted, total: formatted.length });
+    return;
+  }
+  if (role === "landlord") {
+    const props = await db
+      .select()
+      .from(propertiesTable)
+      .where(eq(propertiesTable.landlordId, req.user.id));
+    const [landlord] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, req.user.id));
+    const formatted = props.map((p) =>
+      formatPropertyResponse(p, landlord ?? null, false)
+    );
+    res.json({ properties: formatted, total: formatted.length });
+    return;
+  }
+  res.status(403).json({ error: "Forbidden" });
 });
+
 router.get("/properties/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid ID" });
     return;
   }
-  const [prop] = await db.select().from(propertiesTable).where(eq(propertiesTable.id, id));
+  const [prop] = await db
+    .select()
+    .from(propertiesTable)
+    .where(eq(propertiesTable.id, id));
   if (!prop) {
     res.status(404).json({ error: "Not found" });
     return;
   }
-  const [landlord] = await db.select().from(usersTable).where(eq(usersTable.id, prop.landlordId));
+  let landlordUser = null;
+  if (prop.landlordId) {
+    const [lu] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, prop.landlordId));
+    landlordUser = lu ?? null;
+  }
   let isBookmarked = false;
   if (req.isAuthenticated()) {
-    const [bm] = await db.select().from(bookmarksTable).where(and(eq(bookmarksTable.userId, req.user.id), eq(bookmarksTable.propertyId, id)));
+    const [bm] = await db
+      .select()
+      .from(bookmarksTable)
+      .where(
+        and(
+          eq(bookmarksTable.userId, req.user.id),
+          eq(bookmarksTable.propertyId, id)
+        )
+      );
     isBookmarked = !!bm;
   }
-  res.json(formatProperty(prop, landlord ?? null, isBookmarked));
+  res.json(formatPropertyResponse(prop, landlordUser, isBookmarked));
 });
+
 const createPropertySchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
@@ -98,23 +149,35 @@ const createPropertySchema = z.object({
   bathrooms: z.number().int().min(0),
   area: z.number().nullable().optional(),
   images: z.array(z.string()).default([]),
-  hasLandDocuments: z.boolean()
+  hasLandDocuments: z.boolean(),
+  listingContactName: z.string().min(1, "Owner or agent name is required"),
+  listingContactPhone: z.string().min(5, "Contact phone is required"),
 });
+
 router.post("/properties", async (req, res) => {
-  if (!req.isAuthenticated()) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
+  if (!assertAdmin(req, res)) return;
   const parsed = createPropertySchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
+    res
+      .status(400)
+      .json({ error: "Invalid input", details: parsed.error.flatten() });
     return;
   }
   const { price, area, ...rest } = parsed.data;
-  const [created] = await db.insert(propertiesTable).values({ ...rest, price: String(price), area: area ? String(area) : null, landlordId: req.user.id }).returning();
-  const [landlord] = await db.select().from(usersTable).where(eq(usersTable.id, req.user.id));
-  res.status(201).json(formatProperty(created, landlord ?? null, false));
+  const [created] = await db
+    .insert(propertiesTable)
+    .values({
+      ...rest,
+      price,
+      area: area ?? null,
+      landlordId: null,
+    })
+    .returning();
+  res
+    .status(201)
+    .json(formatPropertyResponse(created, null, false));
 });
+
 const updatePropertySchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().min(1).optional(),
@@ -127,63 +190,70 @@ const updatePropertySchema = z.object({
   bathrooms: z.number().int().min(0).optional(),
   area: z.number().nullable().optional(),
   images: z.array(z.string()).optional(),
-  hasLandDocuments: z.boolean().optional()
+  hasLandDocuments: z.boolean().optional(),
+  listingContactName: z.string().min(1).optional(),
+  listingContactPhone: z.string().min(5).optional(),
 });
+
 router.put("/properties/:id", async (req, res) => {
-  if (!req.isAuthenticated()) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
+  if (!assertAdmin(req, res)) return;
   const id = Number(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid ID" });
     return;
   }
-  const [prop] = await db.select().from(propertiesTable).where(eq(propertiesTable.id, id));
+  const [prop] = await db
+    .select()
+    .from(propertiesTable)
+    .where(eq(propertiesTable.id, id));
   if (!prop) {
     res.status(404).json({ error: "Not found" });
-    return;
-  }
-  if (prop.landlordId !== req.user.id) {
-    res.status(403).json({ error: "Forbidden" });
     return;
   }
   const parsed = updatePropertySchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
+    res
+      .status(400)
+      .json({ error: "Invalid input", details: parsed.error.flatten() });
     return;
   }
   const { price, area, ...rest } = parsed.data;
   const updateData = { ...rest };
-  if (price !== void 0) updateData.price = String(price);
-  if (area !== void 0) updateData.area = area ? String(area) : null;
-  const [updated] = await db.update(propertiesTable).set(updateData).where(eq(propertiesTable.id, id)).returning();
-  const [landlord] = await db.select().from(usersTable).where(eq(usersTable.id, req.user.id));
-  res.json(formatProperty(updated, landlord ?? null, false));
-});
-router.delete("/properties/:id", async (req, res) => {
-  if (!req.isAuthenticated()) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
+  if (price !== void 0) updateData.price = price;
+  if (area !== void 0) updateData.area = area ?? null;
+  const [updated] = await db
+    .update(propertiesTable)
+    .set(updateData)
+    .where(eq(propertiesTable.id, id))
+    .returning();
+  let landlordUser = null;
+  if (updated.landlordId) {
+    const [lu] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, updated.landlordId));
+    landlordUser = lu ?? null;
   }
+  res.json(formatPropertyResponse(updated, landlordUser, false));
+});
+
+router.delete("/properties/:id", async (req, res) => {
+  if (!assertAdmin(req, res)) return;
   const id = Number(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid ID" });
     return;
   }
-  const [prop] = await db.select().from(propertiesTable).where(eq(propertiesTable.id, id));
+  const [prop] = await db
+    .select()
+    .from(propertiesTable)
+    .where(eq(propertiesTable.id, id));
   if (!prop) {
     res.status(404).json({ error: "Not found" });
-    return;
-  }
-  if (prop.landlordId !== req.user.id) {
-    res.status(403).json({ error: "Forbidden" });
     return;
   }
   await db.delete(propertiesTable).where(eq(propertiesTable.id, id));
   res.json({ success: true });
 });
-var stdin_default = router;
-export {
-  stdin_default as default
-};
+
+export default router;

@@ -6,13 +6,32 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PropertyCard } from "@/components/shared/PropertyCard";
 import { Heart, MessageSquare, Clock } from "lucide-react";
 import { format } from "date-fns";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { useEffect } from "react";
+
 function TenantDashboard() {
-  const { profile } = useAppAuth();
+  const [, setLocation] = useLocation();
+  const { profile, isFullyLoaded } = useAppAuth();
+
+  useEffect(() => {
+    if (!isFullyLoaded || !profile) return;
+    if (profile.role === "admin") {
+      setLocation("/dashboard/admin");
+    }
+  }, [isFullyLoaded, profile, setLocation]);
   const { data: bookmarksData, isLoading: isLoadingBookmarks } = useGetBookmarks();
   const { data: enquiriesData, isLoading: isLoadingEnq } = useGetSentEnquiries();
   const bookmarks = bookmarksData?.properties || [];
   const enquiries = enquiriesData?.enquiries || [];
+
+  if (!isFullyLoaded || profile?.role === "admin") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/10">
+        <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return <div className="min-h-screen flex flex-col bg-muted/10">
       <Navbar />
       

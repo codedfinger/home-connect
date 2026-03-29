@@ -35,7 +35,14 @@ function LoginPage() {
         return;
       }
       setUser(json.user);
-      navigate("/onboarding");
+      const pr = await fetch("/api/users/profile", { credentials: "include" });
+      if (pr.ok) {
+        const prof = await pr.json();
+        if (prof.role === "admin") navigate("/dashboard/admin");
+        else navigate("/dashboard/tenant");
+      } else {
+        navigate("/dashboard/tenant");
+      }
     } catch {
       setServerError("Something went wrong. Please try again.");
     }

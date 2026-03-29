@@ -28,7 +28,6 @@ router.get("/users/profile", async (req, res) => {
   });
 });
 const updateProfileSchema = z.object({
-  role: z.enum(["landlord", "tenant"]),
   phone: z.string().nullable().optional(),
   bio: z.string().nullable().optional()
 });
@@ -42,8 +41,12 @@ router.put("/users/profile", async (req, res) => {
     res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
     return;
   }
-  const { role, phone, bio } = parsed.data;
-  const [updated] = await db.update(usersTable).set({ role, phone: phone ?? null, bio: bio ?? null }).where(eq(usersTable.id, req.user.id)).returning();
+  const { phone, bio } = parsed.data;
+  const [updated] = await db
+    .update(usersTable)
+    .set({ phone: phone ?? null, bio: bio ?? null })
+    .where(eq(usersTable.id, req.user.id))
+    .returning();
   res.json({
     id: updated.id,
     username: updated.username ?? updated.email ?? updated.id,

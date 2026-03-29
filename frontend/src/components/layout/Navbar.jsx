@@ -14,11 +14,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 function Navbar() {
-  const { user, profile, isAuthenticated, login, logout, isFullyLoaded } = useAppAuth();
+  const { user, profile, isAuthenticated, logout, isFullyLoaded } = useAppAuth();
   const [location] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const getDashboardLink = () => {
-    if (!profile?.role) return "/onboarding";
+    if (!profile?.role) return "/";
+    if (profile.role === "admin") return "/dashboard/admin";
     return `/dashboard/${profile.role}`;
   };
   const NavLinks = () => <>
@@ -47,7 +48,8 @@ function Navbar() {
         </nav>
 
         <div className="flex items-center gap-4">
-          {!isFullyLoaded ? <div className="h-9 w-24 bg-muted animate-pulse rounded-full" /> : isAuthenticated ? <DropdownMenu>
+          {!isFullyLoaded ? <div className="h-9 w-24 bg-muted animate-pulse rounded-full" /> : isAuthenticated ? (
+            <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full border border-border/50 shadow-sm">
                   <Avatar className="h-10 w-10">
@@ -69,7 +71,7 @@ function Navbar() {
                       @{user?.username}
                     </p>
                     {profile?.role && <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary mt-2 w-max capitalize">
-                        {profile.role}
+                        {profile.role === "admin" ? "Admin" : profile.role}
                       </span>}
                   </div>
                 </DropdownMenuLabel>
@@ -86,9 +88,21 @@ function Navbar() {
                   <span>Log out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu> : <Button onClick={() => login()} className="rounded-full shadow-md hover:shadow-lg transition-all font-semibold px-6">
-              Sign In
-            </Button>}
+            </DropdownMenu>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link href="/login">
+                <Button variant="ghost" className="rounded-full font-semibold px-4">
+                  Sign in
+                </Button>
+              </Link>
+              <Link href="/signup">
+                <Button className="rounded-full shadow-md hover:shadow-lg transition-all font-semibold px-6">
+                  Sign up
+                </Button>
+              </Link>
+            </div>
+          )}
 
           {
     /* Mobile Menu */

@@ -1,39 +1,11 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { bookmarksTable, propertiesTable, usersTable } from "@workspace/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { z } from "zod";
+import { formatPropertyResponse } from "../lib/formatProperty";
+
 const router = Router();
-function formatProperty(p, landlord) {
-  return {
-    id: p.id,
-    landlordId: p.landlordId,
-    title: p.title,
-    description: p.description,
-    type: p.type,
-    status: p.status,
-    price: Number(p.price),
-    city: p.city,
-    address: p.address,
-    bedrooms: p.bedrooms,
-    bathrooms: p.bathrooms,
-    area: p.area ? Number(p.area) : null,
-    images: p.images ?? [],
-    isVerified: p.isVerified,
-    hasLandDocuments: p.hasLandDocuments,
-    landlord: landlord ? {
-      id: landlord.id,
-      username: landlord.username ?? landlord.email ?? landlord.id,
-      firstName: landlord.firstName,
-      lastName: landlord.lastName,
-      profileImage: landlord.profileImageUrl,
-      phone: landlord.phone,
-      isVerified: landlord.isVerified === "true"
-    } : null,
-    isBookmarked: true,
-    createdAt: p.createdAt?.toISOString() ?? (/* @__PURE__ */ new Date()).toISOString()
-  };
-}
 router.get("/bookmarks", async (req, res) => {
   if (!req.isAuthenticated()) {
     res.status(401).json({ error: "Unauthorized" });
@@ -45,11 +17,24 @@ router.get("/bookmarks", async (req, res) => {
     return;
   }
   const propIds = bms.map((b) => b.propertyId);
-  const props = await db.select().from(propertiesTable).where(sql`${propertiesTable.id} = ANY(ARRAY[${sql.join(propIds.map((id) => sql`${id}`), sql`, `)}]::int[])`);
-  const landlordIds = [...new Set(props.map((p) => p.landlordId))];
-  const landlords = landlordIds.length ? await db.select().from(usersTable).where(sql`${usersTable.id} = ANY(ARRAY[${sql.join(landlordIds.map((id) => sql`${id}`), sql`, `)}]::text[])`) : [];
+  const props = await db
+    .select()
+    .from(propertiesTable)
+    .where(inArray(propertiesTable.id, propIds));
+  const landlordIds = [
+    ...new Set(props.map((p) => p.landlordId).filter(Boolean)),
+  ];
+  const landlords = landlordIds.length
+    ? await db.select().from(usersTable).where(inArray(usersTable.id, landlordIds))
+    : [];
   const landlordMap = Object.fromEntries(landlords.map((l) => [l.id, l]));
-  const formatted = props.map((p) => formatProperty(p, landlordMap[p.landlordId] ?? null));
+  const formatted = props.map((p) =>
+    formatPropertyResponse(
+      p,
+      p.landlordId ? landlordMap[p.landlordId] ?? null : null,
+      true
+    )
+  );
   res.json({ properties: formatted, total: formatted.length });
 });
 const bookmarkSchema = z.object({
