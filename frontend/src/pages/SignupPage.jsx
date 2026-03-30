@@ -65,13 +65,13 @@ function SignupPage() {
             <div className="bg-white/20 p-2 rounded-xl">
               <Home className="h-6 w-6 text-white" />
             </div>
-            <span className="text-2xl font-bold">HomeConnect</span>
+            <span className="text-2xl font-bold">ShelterNG</span>
           </Link>
           <h2 className="text-4xl font-bold leading-tight mb-4">
             Join thousands finding homes without agents.
           </h2>
           <p className="text-white/80 text-lg leading-relaxed">
-            Whether you're a landlord listing your property or a tenant searching for your next home — HomeConnect gets you there directly.
+            Whether you're a landlord listing your property or a tenant searching for your next home — ShelterNG gets you there directly.
           </p>
           <div className="mt-10 grid grid-cols-2 gap-4">
             {[
@@ -94,13 +94,13 @@ function SignupPage() {
               <div className="bg-primary/10 p-2 rounded-xl">
                 <Home className="h-5 w-5 text-primary" />
               </div>
-              <span className="text-xl font-bold">Home<span className="text-primary">Connect</span></span>
+              <span className="text-xl font-bold">Shelter<span className="text-primary">NG</span></span>
             </Link>
           </div>
 
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground">Create your account</h1>
-            <p className="text-muted-foreground mt-2">Join HomeConnect and start browsing verified properties</p>
+            <p className="text-muted-foreground mt-2">Join ShelterNG and start browsing verified properties</p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">

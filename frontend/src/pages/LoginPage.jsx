@@ -55,7 +55,7 @@ function LoginPage() {
             <div className="bg-white/20 p-2 rounded-xl">
               <Home className="h-6 w-6 text-white" />
             </div>
-            <span className="text-2xl font-bold">HomeConnect</span>
+            <span className="text-2xl font-bold">ShelterNG</span>
           </Link>
           <h2 className="text-4xl font-bold leading-tight mb-4">
             Find Your Home.<br />No Middlemen.

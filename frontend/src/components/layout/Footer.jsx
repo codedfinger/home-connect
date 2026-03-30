@@ -10,7 +10,7 @@ function Footer() {
                 <Home className="h-5 w-5 text-white" />
               </div>
               <span className="font-display font-bold text-xl tracking-tight text-foreground">
-                Home<span className="text-primary">Connect</span>
+                Shelter<span className="text-primary">NG</span>
               </span>
             </Link>
             <p className="text-muted-foreground text-sm max-w-sm">
@@ -39,7 +39,7 @@ function Footer() {
           </div>
         </div>
         <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-          <p>© {(/* @__PURE__ */ new Date()).getFullYear()} HomeConnect. All rights reserved.</p>
+          <p>© {(/* @__PURE__ */ new Date()).getFullYear()} ShelterNG. All rights reserved.</p>
           <p>Designed with trust in mind.</p>
         </div>
       </div>

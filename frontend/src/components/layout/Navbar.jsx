@@ -38,7 +38,7 @@ function Navbar() {
               <Home className="h-5 w-5 text-primary" />
             </div>
             <span className="font-display font-bold text-xl tracking-tight text-foreground">
-              Home<span className="text-primary">Connect</span>
+              Shelter<span className="text-primary">NG</span>
             </span>
           </Link>
         </div>

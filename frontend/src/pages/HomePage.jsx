@@ -90,7 +90,7 @@ function HomePage() {
         <section className="py-20 bg-white">
           <div className="container mx-auto px-4 md:px-6">
             <div className="text-center max-w-2xl mx-auto mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold font-display mb-4">Why Choose HomeConnect?</h2>
+              <h2 className="text-3xl md:text-4xl font-bold font-display mb-4">Why Choose ShelterNG?</h2>
               <p className="text-muted-foreground text-lg">We've redesigned the rental and buying process to be safer, cheaper, and fully transparent.</p>
             </div>
 

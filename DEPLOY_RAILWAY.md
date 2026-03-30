@@ -27,7 +27,7 @@ pnpm --filter @workspace/db run seed
 ```
 
 Default admin from seed:
-- Email: `admin@homeconnect.local`
+- Email: `admin@shelterng.com`
 - Password: `admin123`
 
 Set these env vars before seeding to override:

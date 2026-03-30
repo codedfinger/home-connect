@@ -180,7 +180,7 @@ function PropertyDetailPage() {
             <div className="bg-emerald-50 rounded-3xl p-8 border border-emerald-100">
               <h3 className="text-xl font-bold font-display text-emerald-900 mb-6 flex items-center gap-2">
                 <ShieldCheck className="h-6 w-6" />
-                HomeConnect Verification
+                ShelterNG Verification
               </h3>
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
