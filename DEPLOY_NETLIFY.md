@@ -1,11 +1,9 @@
 # Deploy Frontend to Netlify
 
-## 1) Update proxy target
-Edit `netlify.toml` and replace:
+## 1) Proxy target
+`netlify.toml` is already configured to proxy API calls to:
 
-`https://REPLACE_WITH_YOUR_RAILWAY_BACKEND_URL`
-
-with your Railway backend URL (for example: `https://your-backend.up.railway.app`).
+`https://workspacebackend-production-16aa.up.railway.app`
 
 ## 2) Create site in Netlify
 - Import this GitHub repository.
