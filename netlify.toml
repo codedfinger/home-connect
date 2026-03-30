@@ -1,0 +1,15 @@
+[build]
+  base = "frontend"
+  command = "pnpm build"
+  publish = "dist/public"
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://REPLACE_WITH_YOUR_RAILWAY_BACKEND_URL/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
