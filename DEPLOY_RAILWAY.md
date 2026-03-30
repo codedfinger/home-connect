@@ -11,12 +11,13 @@
 
 ## 3) Required environment variables
 - `NODE_ENV=production`
+- `NIXPACKS_NODE_VERSION=22`
 - `PORT` is provided by Railway automatically.
 
 ## 4) Build/start (already configured)
 This repo includes `railway.json` that runs:
-- Build: install deps, build frontend + backend, run DB schema push
-- Start: backend server
+- Build: install deps, build frontend + backend
+- Start: run DB schema push, then start backend server
 
 ## 5) Seed demo data (optional)
 Run this once in Railway shell:
