@@ -23,7 +23,7 @@ This repo includes `railway.json` that runs:
 Run this once in Railway shell:
 
 ```bash
-corepack pnpm --filter @workspace/db run seed
+pnpm --filter @workspace/db run seed
 ```
 
 Default admin from seed:
